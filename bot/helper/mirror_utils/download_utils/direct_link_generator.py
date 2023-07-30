@@ -10,7 +10,7 @@ for original authorship. """
 
 from http.cookiejar import MozillaCookieJar
 from json import loads
-from os import path
+from os import path, environ
 from re import findall, match, search, sub
 from time import sleep
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -20,10 +20,15 @@ from bs4 import BeautifulSoup
 from cloudscraper import create_scraper
 from lk21 import Bypass
 from lxml import etree
+from requests import get, session
 
 from bot import config_dict
 from bot.helper.ext_utils.bot_utils import get_readable_time, is_share_link
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
+
+ndus = environ.get("TERA_COOKIE","YQOR7exteHuiC7XNl_TAD_ZaXGexSokJJwoblC4S")
+if ndus is None: TERA_COOKIE = None
+else: TERA_COOKIE = {"ndus": ndus}
 
 fmed_list = ['fembed.net', 'fembed.com', 'femax20.com', 'fcdn.stream', 'feurl.com', 'layarkacaxxi.icu',
              'naniplay.nanime.in', 'naniplay.nanime.biz', 'naniplay.com', 'mm9842.com']
@@ -505,6 +510,44 @@ def uploadee(url: str) -> str:
 
 
 def terabox(url) -> str:
+      sess = session()
+    while True:
+          try: 
+              res = sess.get(url)
+              print("connected")
+              break
+          except: print("retrying")
+    url = res.url
+
+    key = url.split('?surl=')[-1]
+    url = f'http://www.terabox.com/wap/share/filelist?surl={key}'
+    sess.cookies.update(TERA_COOKIE)
+
+    while True:
+        try: 
+            res = sess.get(url)
+            print("connected")
+            break
+        except Exception as e: print("retrying")
+
+    key = res.url.split('?surl=')[-1]
+    soup = BeautifulSoup(res.content, 'lxml')
+    jsToken = None
+
+    for fs in soup.find_all('script'):
+        fstring = fs.string
+        if fstring and fstring.startswith('try {eval(decodeURIComponent'):
+            jsToken = fstring.split('%22')[1]
+
+    while True:
+        try:
+            res = sess.get(f'https://www.terabox.com/share/list?app_id=250528&jsToken={jsToken}&shorturl={key}&root=1')
+            print("connected")
+            break
+        except: print("retrying")
+    result = res.json()
+
+    if result['errno'] != 0: return f"ERROR: '{result['errmsg']}' Check cookies"
     if not path.isfile('terabox.txt'):
         raise DirectDownloadLinkException("ERROR: terabox.txt not found")
     session = create_scraper()
@@ -534,9 +577,9 @@ def terabox(url) -> str:
             "ERROR: Can't download mutiple files")
     result = result[0]
     
-    if result['isdir'] != '0':
+    if result['isdir'] != '0':return "ERROR: Can't download folder"
         raise DirectDownloadLinkException("ERROR: Can't download folder")
-    
+  
     try:
         dlink = result['dlink']
     except Exception as e:
