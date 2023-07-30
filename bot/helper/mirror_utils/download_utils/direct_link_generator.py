@@ -510,7 +510,7 @@ def uploadee(url: str) -> str:
 
 
 def terabox(url) -> str:
-      sess = session()
+    sess = session()
     while True:
           try: 
               res = sess.get(url)
@@ -570,6 +570,7 @@ def terabox(url) -> str:
         result = res.json()
     except Exception as e:
         raise DirectDownloadLinkException(f"ERROR: {e.__class__.__name__}")
+      
     if result['errno'] != 0: raise DirectDownloadLinkException(f"ERROR: '{result['errmsg']}' Check cookies")
     result = result['list']
     if len(result) > 1:
@@ -578,8 +579,7 @@ def terabox(url) -> str:
     result = result[0]
     
     if result['isdir'] != '0':return "ERROR: Can't download folder"
-        raise DirectDownloadLinkException("ERROR: Can't download folder")
-  
+
     try:
         dlink = result['dlink']
     except Exception as e:
